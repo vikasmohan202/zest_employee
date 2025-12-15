@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zest_employee/data/models/auth_results.dart';
-import 'package:zest_employee/data/repositories/auth_repo.dart';
+import 'package:zest_employee/data/repositories/auth/auth_repo.dart';
 
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -16,7 +16,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (res == null) {
           emit(AuthUnauthenticated());
         } else {
-          emit(AuthAuthenticated(res.user));
+          emit(AuthAuthenticated(res.employee));
         }
       } catch (_) {
         emit(AuthUnauthenticated());
@@ -27,7 +27,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthLoading());
       try {
         final AuthResult res = await repo.login(event.email, event.password);
-        emit(AuthAuthenticated(res.user));
+        emit(AuthAuthenticated(res.employee));
       } catch (e) {
         emit(AuthFailure(e.toString()));
         emit(AuthUnauthenticated());
@@ -37,8 +37,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignupRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        final res = await repo.signup(event.email, event.password, name: event.name);
-        emit(AuthAuthenticated(res.user));
+        final res = await repo.signup(
+          event.email,
+          event.password,
+          name: event.name,
+        );
+        emit(AuthAuthenticated(res.employee));
       } catch (e) {
         emit(AuthFailure(e.toString()));
         emit(AuthUnauthenticated());
@@ -48,6 +52,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>((event, emit) async {
       await repo.logout();
       emit(AuthUnauthenticated());
+    });
+    on<AuthRestoreSession>((event, emit) {
+      emit(AuthAuthenticated(event.employee));
     });
   }
 }

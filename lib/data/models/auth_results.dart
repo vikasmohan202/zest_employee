@@ -1,15 +1,27 @@
-import 'package:zest_employee/data/models/user_model.dart';
-
+import 'package:zest_employee/data/models/admin_model.dart';
 
 class AuthResult {
-  final String token;
-  final User user;
+  final String accessToken;
+  final String refreshToken;
+  final Admin employee;
 
-  AuthResult({required this.token, required this.user});
+  AuthResult({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.employee,
+  });
 
   factory AuthResult.fromJson(Map<String, dynamic> json) {
-    final token = (json['token'] ?? json['accessToken'] ?? '').toString();
-    final userMap = (json['user'] ?? json['data'] ?? {}) as Map<String, dynamic>;
-    return AuthResult(token: token, user: User.fromJson(userMap));
+    final accessToken = (json['accessToken'] ?? '').toString();
+    final refreshToken = (json['refreshToken'] ?? '').toString();
+
+    // Now the user data is inside "employee"
+    final userMap = (json['employee'] ?? {}) as Map<String, dynamic>;
+
+    return AuthResult(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      employee: Admin.fromJson(userMap),
+    );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:zest_employee/data/models/user_model.dart';
-
+import 'package:zest_employee/data/models/admin_model.dart';
 
 abstract class AuthState extends Equatable {
   @override
@@ -12,10 +11,10 @@ class AuthInitial extends AuthState {}
 class AuthLoading extends AuthState {}
 
 class AuthAuthenticated extends AuthState {
-  final User user;
-  AuthAuthenticated(this.user);
+  final Admin employee;
+  AuthAuthenticated(this.employee);
   @override
-  List<Object?> get props => [user];
+  List<Object?> get props => [employee];
 }
 
 class AuthUnauthenticated extends AuthState {}

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:zest_employee/logic/bloc/auth_bloc.dart';
-import 'package:zest_employee/logic/bloc/auth_event.dart';
-import 'package:zest_employee/logic/bloc/auth_state.dart';
+import 'package:zest_employee/logic/bloc/auth/auth_bloc.dart';
+import 'package:zest_employee/logic/bloc/auth/auth_event.dart';
+import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
 import 'package:zest_employee/presentation/routes/app_routes.dart';
 
 

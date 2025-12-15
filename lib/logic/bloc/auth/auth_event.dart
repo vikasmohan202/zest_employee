@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:zest_employee/data/models/admin_model.dart';
 
 abstract class AuthEvent extends Equatable {
   @override
@@ -14,6 +15,12 @@ class AuthLoginRequested extends AuthEvent {
   @override
   List<Object?> get props => [email, password];
 }
+class AuthRestoreSession extends AuthEvent {
+  final Admin employee;
+
+  AuthRestoreSession({required this.employee});
+}
+
 
 class AuthSignupRequested extends AuthEvent {
   final String email;
@@ -24,4 +31,6 @@ class AuthSignupRequested extends AuthEvent {
   List<Object?> get props => [email, password, name];
 }
 
-class AuthLogoutRequested extends AuthEvent {}
+class AuthLogoutRequested extends AuthEvent {
+  
+}
