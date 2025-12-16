@@ -1,4 +1,3 @@
-// lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -9,7 +8,7 @@ import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
 import 'package:zest_employee/logic/bloc/order/order_bloc.dart';
 import 'package:zest_employee/logic/bloc/order/order_event.dart';
 import 'package:zest_employee/logic/bloc/order/order_state.dart';
-
+import 'package:zest_employee/presentation/screens/task_details_screen.dart';
 
 // Service locator
 final sl = GetIt.instance;
@@ -118,8 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   UiOrderStatus _mapStatusString(String v) {
     final s = v.toLowerCase();
-    if (s.contains('picked')) return UiOrderStatus.Picked;
-    if (s.contains('completed')) return UiOrderStatus.Completed;
+    if (s.contains('in-process')) return UiOrderStatus.Picked;
+    if (s.contains('pickup-scheduled,')) return UiOrderStatus.Completed;
     if (s.contains('delivered')) return UiOrderStatus.Delivered;
     return UiOrderStatus.Remaining;
   }
@@ -210,6 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -232,7 +232,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 bgColor: _bg,
                                 onTap: () {
                                   // navigate to details if needed
-                                  // Navigator.push(context, MaterialPageRoute(builder: (_) => TaskDetailsScreen(order: o)));
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => TaskDetailsScreen(
+                                        order: state.orders.firstWhere(
+                                          (order) => order.id == o.id,
+                                        ),
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             );

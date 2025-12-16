@@ -49,16 +49,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
 
           // /// ✅ Tip indicator under selected item
-          Positioned(
-            top: -18,
-            left:
-                (_currentIndex * MediaQuery.of(context).size.width / 3) +
-                (MediaQuery.of(context).size.width / 6) -
-                14,
-            child: Container(
-              child: Image.asset("assets/images/bow_indicator.png"),
-            ),
-          ),
+          // Positioned(
+          //   top: 10,
+          //   right: -10,
+          //   left:
+          //       (_currentIndex * MediaQuery.of(context).size.width / 3) +
+          //       (MediaQuery.of(context).size.width / 6) -
+          //       14,
+          //   child: Container(
+          //     child: Image.asset("assets/images/bow_indicator.png"),
+          //   ),
+          // ),
         ],
       ),
     );

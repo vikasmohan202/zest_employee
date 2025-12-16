@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,13 +20,57 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   static const _splashDuration = Duration(seconds: 2);
 
+  final Connectivity _connectivity = Connectivity();
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  bool _isOffline = false;
+  bool _hasCheckedLogin = false;
+
   @override
   void initState() {
     super.initState();
-    _checkLoginStatus();
+    _initConnectivity();
+
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
+      _handleConnectivityChange,
+    );
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initConnectivity() async {
+    final List<ConnectivityResult> result = await _connectivity
+        .checkConnectivity();
+    _handleConnectivityChange(result);
+  }
+
+  void _handleConnectivityChange(List<ConnectivityResult> result) {
+    final bool isConnected =
+        result.isNotEmpty && !result.contains(ConnectivityResult.none);
+
+    if (!isConnected && !_isOffline) {
+      _isOffline = true;
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.noInternet);
+      }
+      return;
+    }
+
+    if (isConnected) {
+      _isOffline = false;
+      _hasCheckedLogin = false;
+      _checkLoginStatus();
+    }
   }
 
   Future<void> _checkLoginStatus() async {
+    if (_hasCheckedLogin || _isOffline) return;
+    _hasCheckedLogin = true;
+
     await Future.delayed(_splashDuration);
 
     try {
@@ -35,33 +80,21 @@ class _SplashScreenState extends State<SplashScreen> {
 
       if (!mounted) return;
 
-      // Token exists — restore user session
       if (token != null && token.isNotEmpty) {
         Admin? employee;
 
         if (userJsonString != null && userJsonString.isNotEmpty) {
-          try {
-            final Map<String, dynamic> jsonMap =
-                jsonDecode(userJsonString) as Map<String, dynamic>;
-            employee = Admin.fromJson(jsonMap);
+          final Map<String, dynamic> jsonMap = jsonDecode(userJsonString);
+          employee = Admin.fromJson(jsonMap);
 
-            // Restore session to AuthBloc
-            context.read<AuthBloc>().add(
-              AuthRestoreSession(employee: employee),
-            );
-          } catch (e) {
-            debugPrint("Error parsing saved user JSON: $e");
-          }
+          context.read<AuthBloc>().add(AuthRestoreSession(employee: employee));
         }
 
-        // Navigate to dashboard
         Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
       } else {
-        // No token → go to login
         Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
     } catch (e, st) {
-      debugPrint('Splash token check failed: $e\n$st');
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
@@ -87,7 +120,6 @@ class _SplashScreenState extends State<SplashScreen> {
     return Column(
       children: [
         const Spacer(),
-
         Column(
           children: [
             Padding(
@@ -101,13 +133,13 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             Container(
+              clipBehavior: Clip.hardEdge,
               decoration: const BoxDecoration(
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(70),
                   bottomRight: Radius.circular(70),
                 ),
               ),
-              clipBehavior: Clip.hardEdge,
               child: Image.asset(
                 "assets/images/splash_logo.png",
                 height: MediaQuery.of(context).size.height * 0.35,
@@ -116,9 +148,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           ],
         ),
-
         const Spacer(),
-
         Padding(
           padding: const EdgeInsets.only(bottom: 18.0),
           child: Image.asset(
