@@ -1,32 +1,81 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:zest_employee/data/models/order_model.dart';
+import 'package:zest_employee/logic/bloc/auth/auth_bloc.dart';
+import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
+import 'package:zest_employee/logic/bloc/order/order_bloc.dart';
+import 'package:zest_employee/logic/bloc/order/order_event.dart';
+import 'package:zest_employee/logic/bloc/order/order_state.dart';
+
+/// ---------------- LOADER HELPERS ----------------
+
+void showLoader(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+}
+
+void hideLoader(BuildContext context) {
+  if (Navigator.canPop(context)) {
+    Navigator.pop(context);
+  }
+}
+
+/// ---------------- SCREEN ----------------
 
 class TaskDetailsScreen extends StatefulWidget {
   final Order order;
-  const TaskDetailsScreen({required this.order, super.key});
+  const TaskDetailsScreen({super.key, required this.order});
 
   @override
   State<TaskDetailsScreen> createState() => _TaskDetailsScreenState();
 }
 
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
+  /// ---- SINGLE SOURCE OF TRUTH ----
+  static const Set<String> _statusSet = {
+    'pickup-scheduled',
+    'in-process',
+    'out-for-delivery',
+    // 'completed',
+    'delivered',
+  };
+
+  late final List<String> _statuses;
   late String selectedStatus;
   bool paymentCollected = false;
 
   @override
   void initState() {
     super.initState();
-    selectedStatus = widget.order.orderStatus.isNotEmpty
-        ? widget.order.orderStatus
-        : "Picked Up";
+    _statuses = _statusSet.toList(growable: false);
+    selectedStatus = _sanitizeStatus(widget.order.orderStatus);
+    paymentCollected =
+        (widget.order.paymentStatus ?? '').toLowerCase() == 'paid';
+  }
 
-    paymentCollected = widget.order.paymentStatus.toLowerCase() == "paid";
+  /// ---- STATUS SANITIZER ----
+  String _sanitizeStatus(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return _statuses.first;
+
+    final cleaned = raw
+        .trim()
+        .toLowerCase()
+        .replaceAll('_', '-')
+        .replaceAll(RegExp(r'\s+'), '');
+
+    return _statusSet.contains(cleaned) ? cleaned : _statuses.first;
   }
 
   String _formatAddress(Address? address) {
-    if (address == null) return "N/A";
+    if (address == null) return 'N/A';
     return [
       address.houseNumber,
       address.streetName,
@@ -34,7 +83,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       address.city,
       address.state,
       address.zipCode,
-    ].where((e) => e != null && e!.isNotEmpty).join(", ");
+    ].where((e) => e != null && e!.trim().isNotEmpty).join(', ');
   }
 
   int get _totalItems =>
@@ -44,317 +93,309 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   Widget build(BuildContext context) {
     final order = widget.order;
     final user = order.user;
+    final imageUrl = order.items.isNotEmpty
+        ? order.items.first.category?.profileImage
+        : null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF315C3D),
-      appBar: AppBar(
+    return BlocListener<OrderBloc, OrderState>(
+      listener: (context, state) {
+        if (state is OrderStatusUpdateInProgress) {
+          showLoader(context);
+        }
+
+        if (state is OrderLoadSuccess) {
+          hideLoader(context);
+          Navigator.pop(context); // back to HomeScreen
+        }
+
+        if (state is OrderStatusUpdateFailure) {
+          hideLoader(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFF315C3D),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF315C3D),
+          elevation: 0,
+          leading: const BackButton(color: Colors.white),
+          title: Text(
+            'Detailed Task',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          centerTitle: true,
         ),
-        title: Text(
-          "Detailed Task",
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildUserInfo(order, user)),
+                  _buildImage(imageUrl),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              _buildTotal(order),
+
+              const SizedBox(height: 20),
+
+              _buildPickupInfo(order),
+
+              const SizedBox(height: 24),
+
+              Text(
+                "Order Items",
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildItemsList(),
+
+              const SizedBox(height: 20),
+
+              Text(
+                "Status",
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white54),
+                ),
+                child: DropdownButton<String>(
+                  value: _statusSet.contains(selectedStatus)
+                      ? selectedStatus
+                      : _statuses.first,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  dropdownColor: const Color(0xFF315C3D),
+                  icon:
+                      const Icon(Icons.arrow_drop_down, color: Colors.white),
+                  style: GoogleFonts.poppins(color: Colors.white),
+                  items: _statuses
+                      .map(
+                        (s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(s),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val == null) return;
+                    setState(() => selectedStatus = val);
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              /// -------- PAYMENT --------
+              Row(
+                children: [
+                  Checkbox(
+                    value: paymentCollected,
+                    activeColor: Colors.lightGreenAccent,
+                    checkColor: Colors.black,
+                    onChanged: (v) =>
+                        setState(() => paymentCollected = v ?? false),
+                  ),
+                  Text(
+                    "Payment Collected (${order.paymentMethod})",
+                    style: GoogleFonts.poppins(color: Colors.white),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.qr_code_scanner, color: Colors.white),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              /// -------- DONE BUTTON --------
+              BlocBuilder<OrderBloc, OrderState>(
+                builder: (context, state) {
+                  final bool isLoading =
+                      state is OrderStatusUpdateInProgress;
+
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              final auth =
+                                  context.read<AuthBloc>().state;
+                              if (auth is! AuthAuthenticated) return;
+
+                              context.read<OrderBloc>().add(
+                                    OrderStatusUpdated(
+                                      orderId: widget.order.id,
+                                      status: selectedStatus,
+                                      employeeId: auth.employee.id,
+                                    ),
+                                  );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCFF7BE),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black,
+                              ),
+                            )
+                          : const Text(
+                              "Done",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ================= WIDGETS =================
+
+  Widget _buildUserInfo(Order order, dynamic user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          user?.fullName ?? 'Unknown User',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          user?.phoneNumber ?? 'N/A',
+          style: GoogleFonts.poppins(color: Colors.white70),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          "Address",
+          style: GoogleFonts.poppins(color: Colors.white70),
+        ),
+        Text(
+          _formatAddress(order.deliveryAddress ?? order.pickupAddress),
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.w600,
-            fontSize: 18,
           ),
         ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user?.fullName ?? "Unknown User",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user?.phoneNumber ?? "N/A",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white.withOpacity(.85),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      Text(
-                        "Pickup or Delivery Address",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white.withOpacity(.7),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        _formatAddress(
-                          order.deliveryAddress ?? order.pickupAddress,
-                        ),
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-                      Text(
-                        "Service Type",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white.withOpacity(.7),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        order.items.firstOrNull?.category?.categoryName ??
-                            "Laundry",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-                      Text(
-                        "Items",
-                        style: GoogleFonts.poppins(
-                          // ignore: deprecated_member_use
-                          color: Colors.white.withOpacity(.7),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        _totalItems.toString(),
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                /// Image (unchanged)
-                SizedBox(
-                  width: 140,
-                  height: 140,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: CachedNetworkImage(
-                      imageUrl: order.items.first.category?.profileImage ?? '',
-                      width: 140,
-                      height: 140,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey.shade300,
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.image_not_supported),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// -------- TOTAL + PRIORITY --------
-            Row(
-              children: [
-                Text(
-                  "Total : ",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  "₹${order.finalAmount ?? order.totalAmount}",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF914D),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    "High Priority",
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// -------- PICKUP BOX --------
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFCFF7BE),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Pickup & Delivery",
-                    style: GoogleFonts.poppins(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Time: ${order.scheduledPickupTimeSlot ?? "N/A"}",
-                    style: GoogleFonts.poppins(fontSize: 14),
-                  ),
-                  Text(
-                    "Address: ${_formatAddress(order.pickupAddress)}",
-                    style: GoogleFonts.poppins(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-            const SizedBox(height: 20),
-
-            /// -------- ITEMS LIST --------
-            Text(
-              "Order Items",
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildItemsList(),
-
-            /// -------- STATUS --------
-            Text(
-              "Status",
-              style: GoogleFonts.poppins(color: Colors.white, fontSize: 15),
-            ),
-            const SizedBox(height: 8),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white54),
-              ),
-              child: DropdownButton(
-                value: selectedStatus,
-                underline: const SizedBox(),
-                isExpanded: true,
-                dropdownColor: const Color(0xFF315C3D),
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                style: GoogleFonts.poppins(color: Colors.white),
-                items:
-                    const [
-                          "pickup-scheduled",
-                          "in-process",
-                          "Completed",
-                          "Delivered",
-                        ]
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
-                onChanged: (val) => setState(() => selectedStatus = val!),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            /// -------- PAYMENT --------
-            Row(
-              children: [
-                Checkbox(
-                  value: paymentCollected,
-                  onChanged: (v) =>
-                      setState(() => paymentCollected = v ?? false),
-                  activeColor: Colors.lightGreenAccent,
-                  checkColor: Colors.black,
-                ),
-                Text(
-                  "Payment Collected (${order.paymentMethod})",
-                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-                ),
-                const Spacer(),
-                const Icon(
-                  Icons.qr_code_scanner,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            /// -------- DONE --------
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFCFF7BE),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(
-                  "Done",
-                  style: GoogleFonts.poppins(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        const SizedBox(height: 14),
+        Text(
+          "Items",
+          style: GoogleFonts.poppins(color: Colors.white70),
         ),
+        Text(
+          _totalItems.toString(),
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImage(String? imageUrl) {
+    return SizedBox(
+      width: 140,
+      height: 140,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: (imageUrl == null || imageUrl.isEmpty)
+            ? Container(
+                color: Colors.grey.shade300,
+                child: const Icon(Icons.image_not_supported),
+              )
+            : CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    const Center(child: CircularProgressIndicator()),
+                errorWidget: (_, __, ___) =>
+                    const Icon(Icons.image_not_supported),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildTotal(Order order) {
+    return Row(
+      children: [
+        Text(
+          "Total : ",
+          style: GoogleFonts.poppins(color: Colors.white, fontSize: 18),
+        ),
+        Text(
+          "₹${order.finalAmount ?? order.totalAmount ?? 0}",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPickupInfo(Order order) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFCFF7BE),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Pickup & Delivery",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text("Time: ${order.scheduledPickupTimeSlot ?? 'N/A'}"),
+          Text("Address: ${_formatAddress(order.pickupAddress)}"),
+        ],
       ),
     );
   }
@@ -363,9 +404,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final items = widget.order.items;
 
     if (items.isEmpty) {
-      return Text(
+      return const Text(
         "No items found",
-        style: GoogleFonts.poppins(color: Colors.white),
+        style: TextStyle(color: Colors.white),
       );
     }
 
@@ -380,49 +421,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           ),
           child: Row(
             children: [
-              /// Item name
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.category!.categoryName,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Category: ${item.category?.categoryName ?? "N/A"}",
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  item.category?.categoryName ?? 'Unknown Item',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-
               Text(
                 "x${item.quantity}",
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: const TextStyle(color: Colors.white),
               ),
-
               const SizedBox(width: 12),
-
               Text(
-                "₹${item.pricePerPiece}",
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+                "₹${item.pricePerPiece ?? 0}",
+                style: const TextStyle(color: Colors.white),
               ),
             ],
           ),

@@ -16,6 +16,15 @@ class AuthAuthenticated extends AuthState {
   @override
   List<Object?> get props => [employee];
 }
+class AuthProfileUpdating extends AuthState {}
+
+class AuthProfileUpdated extends AuthState {
+  final Admin employee;
+  AuthProfileUpdated(this.employee);
+
+  @override
+  List<Object?> get props => [employee];
+}
 
 class AuthUnauthenticated extends AuthState {}
 

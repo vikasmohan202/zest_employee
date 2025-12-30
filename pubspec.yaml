@@ -44,6 +44,7 @@ dependencies:
   country_picker: ^2.0.27
   cached_network_image:
   connectivity_plus:
+  image_picker: 
 
 
 

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:zest_employee/data/models/order_model.dart';
+import 'package:zest_employee/data/models/order_status_response.dart';
 
 abstract class OrderState extends Equatable {
   const OrderState();
@@ -11,7 +12,28 @@ abstract class OrderState extends Equatable {
 /// Initial state before any action
 class OrderInitial extends OrderState {
   const OrderInitial();
+}class OrderStatusUpdateInProgress extends OrderState {
+  const OrderStatusUpdateInProgress();
 }
+
+class OrderStatusUpdateSuccess extends OrderState {
+  final OrderStatusResponse response;
+
+  const OrderStatusUpdateSuccess(this.response);
+
+  @override
+  List<Object?> get props => [response];
+}
+
+class OrderStatusUpdateFailure extends OrderState {
+  final String message;
+
+  const OrderStatusUpdateFailure(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
 
 /// Loading state while fetching orders
 class OrderLoadInProgress extends OrderState {

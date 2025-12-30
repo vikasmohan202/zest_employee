@@ -96,7 +96,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     .toList();
 
                 final delivered = state.orders
-                    .where((e) => e.orderStatus == 'Delivered')
+                    .where((e) => e.orderStatus == 'delivered')
                     .toList();
 
                 return _buildBody(context, picked, completed, delivered);

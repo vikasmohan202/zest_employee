@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:zest_employee/data/models/auth_results.dart';
 import 'package:zest_employee/data/repositories/auth/auth_repo.dart';
 import 'package:zest_employee/core/utils/token_storage.dart';
@@ -68,5 +70,31 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> logout() async {
     await _storage.clear();
+  }
+  @override
+  Future<AuthResult> updateProfile({
+    required String employeeId,
+    required String fullName,
+    required String email,
+    required String phoneNumber,
+    required String position,
+    String? password,
+    File? profileImage,
+  }) async {
+    final token = await _storage.readToken();
+
+    final res = await _api.updateProfile(
+      employeeId: employeeId,
+      token: token!,
+      fullName: fullName,
+      email: email,
+      phoneNumber: phoneNumber,
+      position: position,
+      password: password,
+      profileImage: profileImage,
+    );
+
+    await _storage.saveUserJson(res.employee.toJson());
+    return res;
   }
 }

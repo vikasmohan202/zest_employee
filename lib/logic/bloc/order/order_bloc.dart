@@ -17,7 +17,10 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<OrderFetched>(_onFetched);
     on<OrderRefreshed>(_onRefreshed);
     on<OrderRequested>(_onRequested);
+     on<OrderStatusUpdated>(_onStatusUpdated);
   }
+
+  
 
   Future<void> _onFetched(OrderFetched event, Emitter<OrderState> emit) async {
     // If already loading, ignore
@@ -68,4 +71,25 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     //   emit(OrderLoadFailure(e.toString()));
     // }
   }
+  Future<void> _onStatusUpdated(
+    OrderStatusUpdated event,
+    Emitter<OrderState> emit,
+  ) async {
+    emit(const OrderStatusUpdateInProgress());
+
+    try {
+      await _orderRepository.updateOrderStatus(
+        event.orderId,
+        event.status,
+      );
+
+      final orders =
+          await _orderRepository.getAllOrders(event.employeeId);
+
+      emit(OrderLoadSuccess(orders));
+    } catch (e) {
+      emit(OrderStatusUpdateFailure(e.toString()));
+    }
+  }
 }
+

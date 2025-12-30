@@ -1,5 +1,6 @@
 // lib/data/repositories/order_repository.dart
 import 'package:zest_employee/data/models/order_model.dart';
+import 'package:zest_employee/data/models/order_status_response.dart';
 
 abstract class OrderRepository {
   /// Fetch all orders
@@ -15,7 +16,7 @@ abstract class OrderRepository {
   Future<Order> updateOrder(String id, Map<String, dynamic> updates);
 
   /// Change status for an order (e.g., "Delivered", "Cancelled")
-  Future<Order> updateOrderStatus(String id, String status);
+  Future<OrderStatusResponse> updateOrderStatus(String id, String status);
 
   /// Delete an order by id (if supported)
   Future<void> deleteOrder(String id);

@@ -23,6 +23,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     });
 
+on<AuthUpdateProfileRequested>((event, emit) async {
+  emit(AuthLoading());
+
+  try {
+    final res = await repo.updateProfile(
+      employeeId: event.employeeId,
+      fullName: event.fullName,
+      email: event.email,
+      phoneNumber: event.phoneNumber,
+      position: event.position,
+      profileImage: event.profileImage, // 🔥 IMAGE
+    );
+
+    emit(AuthAuthenticated(res.employee));
+  } catch (e) {
+    emit(AuthFailure(e.toString()));
+  }
+});
+
+
     on<AuthLoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {

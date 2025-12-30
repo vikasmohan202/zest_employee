@@ -6,6 +6,20 @@ abstract class OrderEvent extends Equatable {
   @override
   List<Object?> get props => [];
 }
+class OrderStatusUpdated extends OrderEvent {
+  final String orderId;
+  final String status;
+  final String employeeId;
+
+  const OrderStatusUpdated({
+    required this.orderId,
+    required this.status,
+    required this.employeeId,
+  });
+
+  @override
+  List<Object?> get props => [orderId, status, employeeId];
+}
 
 /// Load first page (or all) of orders
 class OrderFetched extends OrderEvent {
