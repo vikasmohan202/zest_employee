@@ -1,3 +1,4 @@
+import 'package:zest_employee/core/utils/token_storage.dart';
 import 'package:zest_employee/data/models/admin_model.dart';
 
 class AuthResult {
@@ -12,8 +13,10 @@ class AuthResult {
   });
 
   factory AuthResult.fromJson(Map<String, dynamic> json) {
-    final accessToken = (json['accessToken'] ?? '').toString();
-    final refreshToken = (json['refreshToken'] ?? '').toString();
+    final token =  TokenStorage().readToken();
+     final reToken=TokenStorage().readRefreshToken();
+    final accessToken = (json['accessToken'] ?? token).toString();
+    final refreshToken = (json['refreshToken'] ?? reToken).toString();
 
     // Now the user data is inside "employee"
     final userMap = (json['employee'] ?? {}) as Map<String, dynamic>;
