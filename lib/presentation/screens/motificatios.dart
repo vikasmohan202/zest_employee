@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'package:zest_employee/logic/bloc/notification/notification_bloc.dart';
+import 'package:zest_employee/logic/bloc/notification/notification_state.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
+  
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +16,12 @@ class NotificationScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor, // Your screen background header color
+        backgroundColor: bgColor,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(
-          color: Colors.white, // <-- This makes the back icon white
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          "Edit Profile",
+          "Notifications",
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontSize: 18,
@@ -26,82 +29,89 @@ class NotificationScreen extends StatelessWidget {
           ),
         ),
       ),
-
       body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            const SizedBox(height: 10),
+        child: BlocBuilder<NotificationBloc, NotificationState>(
+          builder: (context, state) {
+            if (state is NotificationLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
 
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(40),
-                    topRight: Radius.circular(40),
-                  ),
+            if (state is NotificationError) {
+              return Center(
+                child: Text(
+                  state.message,
+                  style: GoogleFonts.poppins(color: Colors.white),
                 ),
-                child: ListView(
-                  children: [
-                    const SizedBox(height: 20),
-                    Text(
-                      "Today",
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+              );
+            }
 
-                    // Notification Item 1
-                    _notificationItem(
-                      icon: Icons.notifications_active_outlined,
-                      iconBg: const Color(0xFFDFF1FF),
-                      title: "Reminder",
-                      message: "Shirt Wash – #2F33J scheduled Tomorrow.",
-                      time: "13min",
-                    ),
-                    _divider(),
+            if (state is NotificationLoaded) {
+              if (state.notifications.isEmpty) {
+                return _emptyView();
+              }
 
-                    // Notification Item 2
-                    _notificationItem(
-                      icon: Icons.verified_outlined,
-                      iconBg: const Color(0xFFE8FBE5),
-                      title: "Order Delivered",
-                      message:
-                          "Your Order – Black Shirt is successfully delivered.",
-                      time: "1 hr",
-                    ),
-                    _divider(),
+              return _notificationList(state);
+            }
 
-                    // Notification Item 3
-                    _notificationItem(
-                      icon: Icons.celebration,
-                      iconBg: const Color(0xFFFDEBF9),
-                      title: "Winter Offer",
-                      message:
-                          "49% off on Dry Cleaning Service until November 23rd.",
-                      time: "1 hr",
-                    ),
-                    _divider(),
-                  ],
-                ),
-              ),
-            ),
-          ],
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );
   }
 
+  /// 🔔 Notification List
+  Widget _notificationList(NotificationLoaded state) {
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ListView.builder(
+              itemCount: state.notifications.length,
+              itemBuilder: (context, index) {
+                final notification = state.notifications[index];
+
+                return Column(
+                  children: [
+                    _notificationItem(
+                      icon: _getIcon(notification.title),
+                      iconBg: _getIconBg(notification.title),
+                      title: notification.title,
+                      message: notification.body,
+                      //time: _timeAgo(notification.updatedAt),
+                    ),
+                    _divider(),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 📭 Empty State
+  Widget _emptyView() {
+    return Center(
+      child: Text(
+        "No notifications found",
+        style: GoogleFonts.poppins(color: Colors.white70, fontSize: 16),
+      ),
+    );
+  }
+
+  /// 🔔 Single Notification UI
   Widget _notificationItem({
     required IconData icon,
     required Color iconBg,
     required String title,
     required String message,
-    required String time,
+    // required String time,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -142,10 +152,13 @@ class NotificationScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            time,
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
-          ),
+          // Text(
+          //   time,
+          //   style: GoogleFonts.poppins(
+          //     color: Colors.white70,
+          //     fontSize: 12,
+          //   ),
+          // ),
         ],
       ),
     );
@@ -157,5 +170,39 @@ class NotificationScreen extends StatelessWidget {
       color: Colors.white.withOpacity(0.25),
       margin: const EdgeInsets.symmetric(vertical: 4),
     );
+  }
+
+  /// 🎯 Icon based on title
+  IconData _getIcon(String title) {
+    if (title.toLowerCase().contains("order")) {
+      return Icons.verified_outlined;
+    }
+    if (title.toLowerCase().contains("offer")) {
+      return Icons.celebration;
+    }
+    return Icons.notifications_active_outlined;
+  }
+
+  /// 🎨 Icon background
+  Color _getIconBg(String title) {
+    if (title.toLowerCase().contains("order")) {
+      return const Color(0xFFE8FBE5);
+    }
+    if (title.toLowerCase().contains("offer")) {
+      return const Color(0xFFFDEBF9);
+    }
+    return const Color(0xFFDFF1FF);
+  }
+
+  /// ⏱ Time ago helper
+  String _timeAgo(String timestamp) {
+    final date = DateTime.tryParse(timestamp);
+    if (date == null) return "";
+
+    final diff = DateTime.now().difference(date);
+
+    if (diff.inMinutes < 60) return "${diff.inMinutes} min";
+    if (diff.inHours < 24) return "${diff.inHours} hr";
+    return "${diff.inDays} d";
   }
 }

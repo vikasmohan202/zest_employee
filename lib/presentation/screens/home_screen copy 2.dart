@@ -164,22 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (state is OrderLoadInProgress || state is OrderInitial) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (state is OrderEmpty) {
-                    return emptyState(
-                      title: 'No Active Orders',
-                      subtitle:
-                          'You’re all caught up! Pull down to refresh or wait for new tasks.',
-                      icon: Icons.assignment_turned_in_outlined,
-                      onRetry: () {
-                        final authState = context.read<AuthBloc>().state;
-                        if (authState is AuthAuthenticated) {
-                          _orderBloc.add(
-                            OrderFetched(id: authState.employee.id),
-                          );
-                        }
-                      },
-                    );
-                  }
 
                   if (state is OrderLoadFailure) {
                     return ListView(
@@ -596,61 +580,5 @@ Widget buildOrderCard({
         ],
       ),
     ),
-  );
-}
-
-Widget emptyState({
-  required String title,
-  required String subtitle,
-  IconData icon = Icons.inbox_outlined,
-  VoidCallback? onRetry,
-}) {
-  return ListView(
-    physics: const AlwaysScrollableScrollPhysics(),
-    children: [
-      const SizedBox(height: 120),
-      Icon(icon, size: 80, color: Colors.white.withOpacity(0.6)),
-      const SizedBox(height: 20),
-      Center(
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      const SizedBox(height: 8),
-      Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.75),
-            ),
-          ),
-        ),
-      ),
-      if (onRetry != null) ...[
-        const SizedBox(height: 24),
-        Center(
-          child: ElevatedButton(
-            onPressed: onRetry,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color.fromRGBO(51, 107, 63, 1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text('Refresh'),
-          ),
-        ),
-      ],
-    ],
   );
 }

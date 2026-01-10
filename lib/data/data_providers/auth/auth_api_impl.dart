@@ -3,22 +3,39 @@ import 'package:zest_employee/core/constants/api_end_point.dart';
 import 'package:zest_employee/core/network/api_clients.dart';
 import 'package:zest_employee/data/data_providers/auth/auth_api.dart';
 import 'package:zest_employee/data/models/auth_results.dart';
+import 'package:zest_employee/data/models/notification_model.dart';
 
 class HttpAuthApi implements AuthApi {
   final ApiClient _api;
   HttpAuthApi(this._api);
 
   @override
-  Future<AuthResult> login({required String email, required String password}) async {
+  Future<AuthResult> login({
+    required String email,
+    required String password,
+  }) async {
+    final String input = email.trim();
+
+    /// Decide payload key
+    final Map<String, dynamic> body = {
+      if (input.contains('@')) 'email': input else 'phoneNumber': input,
+      'password': password,
+    };
+
     final json = await _api.post(
       Endpoints.baseUrl + Endpoints.login,
-      body: {'email': email, 'password': password},
+      body: body,
     );
+
     return AuthResult.fromJson(json);
   }
 
   @override
-  Future<AuthResult> signup({required String email, required String password, String? name}) async {
+  Future<AuthResult> signup({
+    required String email,
+    required String password,
+    String? name,
+  }) async {
     final json = await _api.post(
       Endpoints.baseUrl + Endpoints.signup,
       body: {'email': email, 'password': password, 'name': name},
@@ -33,6 +50,12 @@ class HttpAuthApi implements AuthApi {
       token: token,
     );
     return AuthResult.fromJson(json);
+  }
+
+  @override
+  Future<NotificationResponse> getNotification() async {
+    final json = await _api.get(Endpoints.baseUrl + Endpoints.getNotifications);
+    return NotificationResponse.fromJson(json);
   }
 
   // 🔥 UPDATE PROFILE

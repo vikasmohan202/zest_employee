@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:zest_employee/data/models/auth_results.dart';
+import 'package:zest_employee/data/models/notification_model.dart';
 import 'package:zest_employee/data/repositories/auth/auth_repo.dart';
 import 'package:zest_employee/core/utils/token_storage.dart';
 import 'package:zest_employee/data/data_providers/auth/auth_api.dart';
@@ -9,11 +10,9 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthApi _api;
   final TokenStorage _storage;
 
-  AuthRepositoryImpl({
-    required AuthApi api,
-    required TokenStorage storage,
-  })  : _api = api,
-        _storage = storage;
+  AuthRepositoryImpl({required AuthApi api, required TokenStorage storage})
+    : _api = api,
+      _storage = storage;
 
   @override
   Future<AuthResult> login(String email, String password) async {
@@ -32,11 +31,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String password, {
     String? name,
   }) async {
-    final res = await _api.signup(
-      email: email,
-      password: password,
-      name: name,
-    );
+    final res = await _api.signup(email: email, password: password, name: name);
 
     await _storage.saveToken(res.accessToken);
 
@@ -68,9 +63,27 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<NotificationResponse> getNotifications() async {
+    final res = await _api.getNotification();
+
+    if (!res.success) {
+      return NotificationResponse(
+        success: false,
+        total: 0,
+        page: 0,
+        totalPages: 0,
+        notifications: [],
+      );
+    }
+
+    return res;
+  }
+
+  @override
   Future<void> logout() async {
     await _storage.clear();
   }
+
   @override
   Future<AuthResult> updateProfile({
     required String employeeId,

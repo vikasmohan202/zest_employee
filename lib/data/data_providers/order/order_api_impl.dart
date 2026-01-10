@@ -17,10 +17,7 @@ class OrderApiImpl implements OrderApi {
   ) async {
     final url = "${Endpoints.baseUrl}${Endpoints.updateOrderStatus}$id";
 
-    final json = await _api.put(
-      url,
-      body: {'status': orderStatus},
-    );
+    final json = await _api.put(url, body: {'status': orderStatus});
 
     return OrderStatusResponse.fromJson(json);
   }
@@ -32,9 +29,6 @@ class OrderApiImpl implements OrderApi {
     final json = await _api.get(url);
     final List<dynamic> list = json['orders'] ?? [];
 
-    return list
-        .map((e) => Order.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return list.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
   }
 }
-

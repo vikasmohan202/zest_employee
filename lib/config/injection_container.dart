@@ -14,6 +14,7 @@ import 'package:zest_employee/data/repositories/auth/auth_repo_impl.dart';
 import 'package:zest_employee/data/repositories/orders/auth_repo.dart';
 import 'package:zest_employee/data/repositories/orders/auth_repo_impli.dart';
 import 'package:zest_employee/logic/bloc/auth/auth_bloc.dart';
+import 'package:zest_employee/logic/bloc/notification/notification_bloc.dart';
 import 'package:zest_employee/logic/bloc/order/order_bloc.dart';
 
 final sl = GetIt.instance;
@@ -53,6 +54,10 @@ Future<void> initDI() async {
     // OrderBloc: each consumer gets a fresh instance
     sl.registerFactory<OrderBloc>(
       () => OrderBloc(orderRepository: sl<OrderRepository>()),
+    );
+
+    sl.registerFactory<NotificationBloc>(
+      () => NotificationBloc(sl<AuthRepository>()),
     );
 
     if (kDebugMode) {

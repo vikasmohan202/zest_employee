@@ -20,6 +20,22 @@ class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
   bool _obscure = true;
   bool rememberMe = false;
+  String? emailOrPhoneValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Enter Email or Phone Number';
+    }
+
+    final input = value.trim();
+
+    final phoneRegex = RegExp(r'^[6-9]\d{9}$');
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+    if (phoneRegex.hasMatch(input) || emailRegex.hasMatch(input)) {
+      return null;
+    }
+
+    return 'Enter valid Email or Phone Number';
+  }
 
   @override
   void dispose() {
@@ -76,15 +92,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // Email
                     BrandedTextField(
                       controller: _email,
-                      labelText: "Email Address",
-                      prefix: const Icon(Icons.email_outlined),
+                      labelText: "Email or Phone Number",
+                      prefix: const Icon(Icons.alternate_email),
                       backgroundColor: Colors.white.withOpacity(0.16),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Enter email' : null,
+                      validator: emailOrPhoneValidator,
                     ),
 
                     const SizedBox(height: 20),

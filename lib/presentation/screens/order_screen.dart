@@ -58,14 +58,12 @@ class _OrderScreenState extends State<OrderScreen> {
         body: SafeArea(
           child: BlocBuilder<OrderBloc, OrderState>(
             builder: (context, state) {
-              // ✅ LOADING
               if (state is OrderLoadInProgress) {
                 return const Center(
                   child: CircularProgressIndicator(color: Colors.white),
                 );
               }
 
-              // ❌ ERROR
               if (state is OrderLoadFailure) {
                 return Center(
                   child: Text(
@@ -239,7 +237,12 @@ class _OrderScreenState extends State<OrderScreen> {
                 MaterialPageRoute(
                   builder: (_) => TaskDetailsScreen(order: order),
                 ),
-              );
+              ).then((_) {
+                final authState = context.read<AuthBloc>().state;
+                if (authState is AuthAuthenticated) {
+                  _orderBloc.add(OrderFetched(id: authState.employee.id));
+                }
+              });
             },
           ),
         );

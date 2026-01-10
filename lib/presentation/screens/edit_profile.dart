@@ -40,8 +40,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     nameController = TextEditingController(text: widget.employee.fullName);
     emailController = TextEditingController(text: widget.employee.email);
-    phoneController =
-        TextEditingController(text: widget.employee.phoneNumber ?? '');
+    phoneController = TextEditingController(
+      text: widget.employee.phoneNumber ?? '',
+    );
     addressController = TextEditingController();
     zipController = TextEditingController();
   }
@@ -81,9 +82,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
 
         if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
         }
       },
       child: Scaffold(
@@ -128,12 +129,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             backgroundImage: _selectedImage != null
                                 ? FileImage(_selectedImage!)
                                 : (widget.employee.profileImage != null &&
-                                        widget.employee.profileImage!.isNotEmpty)
-                                    ? NetworkImage(
-                                        widget.employee.profileImage!)
-                                    : const AssetImage(
-                                            "assets/images/user.jpg")
-                                        as ImageProvider,
+                                      widget.employee.profileImage!.isNotEmpty)
+                                ? NetworkImage(widget.employee.profileImage!)
+                                : const AssetImage("assets/images/user.jpg")
+                                      as ImageProvider,
                           ),
                           Container(
                             width: 40,
@@ -183,8 +182,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           );
                         },
                         child: Padding(
-                          padding:
-                              const EdgeInsets.only(left: 14, right: 8),
+                          padding: const EdgeInsets.only(left: 14, right: 8),
                           child: Text(
                             countryFlag,
                             style: const TextStyle(fontSize: 22),
@@ -193,15 +191,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 35),
 
-                    BrandedTextField(
-                      controller: addressController,
-                      labelText: "Current Address",
-                      minLines: 1,
-                      maxLines: 2,
-                    ),
+                    // const SizedBox(height: 35),
 
+                    // BrandedTextField(
+                    //   controller: addressController,
+                    //   labelText: "Current Address",
+                    //   minLines: 1,
+                    //   maxLines: 2,
+                    // ),
                     const SizedBox(height: 35),
 
                     BrandedPrimaryButton(
@@ -223,15 +221,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _onSavePressed() {
     context.read<AuthBloc>().add(
-          AuthUpdateProfileRequested(
-            employeeId: widget.employee.id,
-            fullName: nameController.text.trim(),
-            email: emailController.text.trim(),
-            phoneNumber: phoneController.text.trim(),
-            position: widget.employee.position ?? '',
-            profileImage: _selectedImage, // 🔥 IMAGE PASSED
-          ),
-        );
+      AuthUpdateProfileRequested(
+        employeeId: widget.employee.id,
+        fullName: nameController.text.trim(),
+        email: emailController.text.trim(),
+        phoneNumber: phoneController.text.trim(),
+        position: widget.employee.position ?? '',
+        profileImage: _selectedImage, // 🔥 IMAGE PASSED
+      ),
+    );
   }
 
   Widget _stateDropdown() {
@@ -254,14 +252,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             "Ohio",
             "Texas",
             "California",
-          ]
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e),
-                ),
-              )
-              .toList(),
+          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         ),
       ),
     );
