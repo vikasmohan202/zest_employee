@@ -9,16 +9,15 @@ import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
 import 'package:zest_employee/logic/bloc/order/order_bloc.dart';
 import 'package:zest_employee/logic/bloc/order/order_event.dart';
 import 'package:zest_employee/logic/bloc/order/order_state.dart';
+import 'package:zest_employee/presentation/widgets/custom_appbar.dart';
 
-/// ---------------- LOADER HELPERS ----------------
+/// ---------------- LOADER ----------------
 
 void showLoader(BuildContext context) {
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(),
-    ),
+    builder: (_) => const Center(child: CircularProgressIndicator()),
   );
 }
 
@@ -32,30 +31,29 @@ void hideLoader(BuildContext context) {
 
 class TaskDetailsScreen extends StatefulWidget {
   final Order order;
-  const TaskDetailsScreen({super.key, required this.order});
+  String? orderId;
+   TaskDetailsScreen({this.orderId, super.key, required this.order});
 
   @override
   State<TaskDetailsScreen> createState() => _TaskDetailsScreenState();
 }
 
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
-  /// ---- SINGLE SOURCE OF TRUTH ----
-  static const Set<String> _statusSet = {
-    'pickup-scheduled',
-    'in-process',
-    'out-for-delivery',
-    // 'completed',
-    'delivered',
-  };
+  /// ---- STATUS CONSTANTS ----
+  static const String pickupScheduled = 'pickup-scheduled';
+  static const String inProcess = 'in-process';
+  static const String outForDelivery = 'out-for-delivery';
+  static const String delivered = 'delivered';
+  static const String pickedUp = 'picked-up';
 
-  late final List<String> _statuses;
+  late List<String> _statuses;
   late String selectedStatus;
+
   bool paymentCollected = false;
 
   @override
   void initState() {
     super.initState();
-    _statuses = _statusSet.toList(growable: false);
     selectedStatus = _sanitizeStatus(widget.order.orderStatus);
     paymentCollected =
         (widget.order.paymentStatus ?? '').toLowerCase() == 'paid';
@@ -63,15 +61,52 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   /// ---- STATUS SANITIZER ----
   String _sanitizeStatus(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return _statuses.first;
+    if (raw == null || raw.trim().isEmpty) return pickupScheduled;
 
-    final cleaned = raw
+    return raw
         .trim()
         .toLowerCase()
         .replaceAll('_', '-')
         .replaceAll(RegExp(r'\s+'), '');
+  }
 
-    return _statusSet.contains(cleaned) ? cleaned : _statuses.first;
+  /// ---- ROLE-BASED STATUS LOGIC ----
+  List<String> _getAllowedStatuses({
+    required Order order,
+    required String employeeId,
+  }) {
+    final current = _sanitizeStatus(order.orderStatus);
+
+    final isPickupEmployee = order.pickupEmployee != null
+        ? order.pickupEmployee!.id == employeeId
+        : false;
+
+    final isDeliveryEmployee = order.deliveryEmployee != null
+        ? order.deliveryEmployee!.id == employeeId
+        : false;
+
+    /// DELIVERY EMPLOYEE
+    if (isDeliveryEmployee) {
+      // if (current == outForDelivery) {
+      return [inProcess, delivered];
+      // }
+      if (current == delivered) {
+        return [delivered];
+      }
+    }
+
+    /// PICKUP EMPLOYEE
+    if (isPickupEmployee) {
+      if (current == pickupScheduled) {
+        return [pickupScheduled, pickedUp];
+      }
+      if (current == inProcess) {
+        return [inProcess, pickedUp];
+      }
+    }
+
+    /// DEFAULT → LOCKED
+    return [current];
   }
 
   String _formatAddress(Address? address) {
@@ -105,33 +140,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
         if (state is OrderLoadSuccess) {
           hideLoader(context);
-          Navigator.pop(context); // back to HomeScreen
+          Navigator.pop(context);
         }
 
         if (state is OrderStatusUpdateFailure) {
           hideLoader(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
           );
         }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF315C3D),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF315C3D),
-          elevation: 0,
-          leading: const BackButton(color: Colors.white),
-          title: Text(
-            'Detailed Task',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        appBar: const CustomAppBar(
+          title: 'Detailed Task',
           centerTitle: true,
+          elevation: 0,
+          backgroundColor: Color(0xFF315C3D),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(18),
@@ -145,17 +170,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   _buildImage(imageUrl),
                 ],
               ),
-
               const SizedBox(height: 20),
-
               _buildTotal(order),
-
               const SizedBox(height: 20),
-
               _buildPickupInfo(order),
-
               const SizedBox(height: 24),
 
+              /// ---------- ITEMS ----------
               Text(
                 "Order Items",
                 style: GoogleFonts.poppins(
@@ -167,96 +188,119 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               const SizedBox(height: 12),
               _buildItemsList(),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              Text(
-                "Status",
-                style: GoogleFonts.poppins(color: Colors.white),
-              ),
-              const SizedBox(height: 8),
+              /// ---------- STATUS ----------
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, authState) {
+                  if (authState is! AuthAuthenticated) {
+                    return const SizedBox();
+                  }
 
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white54),
-                ),
-                child: DropdownButton<String>(
-                  value: _statusSet.contains(selectedStatus)
+                  final employeeId = authState.employee.id;
+
+                  _statuses = _getAllowedStatuses(
+                    order: order,
+                    employeeId: employeeId,
+                  );
+
+                  selectedStatus = _statuses.contains(selectedStatus)
                       ? selectedStatus
-                      : _statuses.first,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  dropdownColor: const Color(0xFF315C3D),
-                  icon:
-                      const Icon(Icons.arrow_drop_down, color: Colors.white),
-                  style: GoogleFonts.poppins(color: Colors.white),
-                  items: _statuses
-                      .map(
-                        (s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s),
+                      : _statuses.first;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Status",
+                        style: GoogleFonts.poppins(color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white54),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (val) {
-                    if (val == null) return;
-                    setState(() => selectedStatus = val);
-                  },
-                ),
+                        child: DropdownButton<String>(
+                          value: selectedStatus,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          dropdownColor: const Color(0xFF315C3D),
+                          icon: const Icon(
+                            Icons.arrow_drop_down,
+                            color: Colors.white,
+                          ),
+                          style: GoogleFonts.poppins(color: Colors.white),
+                          items: _statuses
+                              .map(
+                                (s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(
+                                    s.replaceAll('-', ' ').toUpperCase(),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _statuses.length == 1
+                              ? null
+                              : (val) => setState(() => selectedStatus = val!),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
 
-              /// -------- PAYMENT --------
-              Row(
-                children: [
-                  Checkbox(
-                    value: paymentCollected,
-                    activeColor: Colors.lightGreenAccent,
-                    checkColor: Colors.black,
-                    onChanged: (v) =>
-                        setState(() => paymentCollected = v ?? false),
-                  ),
-                  Text(
-                    "Payment Collected (${order.paymentMethod})",
-                    style: GoogleFonts.poppins(color: Colors.white),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.qr_code_scanner, color: Colors.white),
-                ],
-              ),
-
+              /// ---------- PAYMENT ----------
+              // Row(
+              //   children: [
+              //     Checkbox(
+              //       value: paymentCollected,
+              //       activeColor: Colors.lightGreenAccent,
+              //       checkColor: Colors.black,
+              //       onChanged: selectedStatus == delivered
+              //           ? (v) => setState(() => paymentCollected = v ?? false)
+              //           : null,
+              //     ),
+              //     Text(
+              //       "Payment Collected (${order.paymentMethod})",
+              //       style: GoogleFonts.poppins(color: Colors.white),
+              //     ),
+              //   ],
+              // ),
               const SizedBox(height: 30),
 
-              /// -------- DONE BUTTON --------
+              /// ---------- DONE ----------
               BlocBuilder<OrderBloc, OrderState>(
                 builder: (context, state) {
-                  final bool isLoading =
-                      state is OrderStatusUpdateInProgress;
+                  final isLoading = state is OrderStatusUpdateInProgress;
 
                   return SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: isLoading
+                      onPressed:
+                          isLoading ||
+                              selectedStatus ==
+                                  _sanitizeStatus(order.orderStatus)
                           ? null
                           : () {
-                              final auth =
-                                  context.read<AuthBloc>().state;
+                              final auth = context.read<AuthBloc>().state;
                               if (auth is! AuthAuthenticated) return;
 
                               context.read<OrderBloc>().add(
-                                    OrderStatusUpdated(
-                                      orderId: widget.order.id,
-                                      status: selectedStatus,
-                                      employeeId: auth.employee.id,
-                                    ),
-                                  );
+                                OrderStatusUpdated(
+                                  orderId: order.id,
+                                  status: selectedStatus,
+                                  employeeId: auth.employee.id,
+                                ),
+                              );
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFCFF7BE),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -289,7 +333,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  /// ================= WIDGETS =================
+  /// ---------------- UI HELPERS ----------------
 
   Widget _buildUserInfo(Order order, dynamic user) {
     return Column(
@@ -309,10 +353,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           style: GoogleFonts.poppins(color: Colors.white70),
         ),
         const SizedBox(height: 14),
-        Text(
-          "Address",
-          style: GoogleFonts.poppins(color: Colors.white70),
-        ),
+        Text("Address", style: GoogleFonts.poppins(color: Colors.white70)),
         Text(
           _formatAddress(order.deliveryAddress ?? order.pickupAddress),
           style: GoogleFonts.poppins(
@@ -321,10 +362,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        Text(
-          "Items",
-          style: GoogleFonts.poppins(color: Colors.white70),
-        ),
+        Text("Quantity", style: GoogleFonts.poppins(color: Colors.white70)),
         Text(
           _totalItems.toString(),
           style: GoogleFonts.poppins(
@@ -342,7 +380,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       height: 140,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: (imageUrl == null || imageUrl.isEmpty)
+        child: imageUrl == null || imageUrl.isEmpty
             ? Container(
                 color: Colors.grey.shade300,
                 child: const Icon(Icons.image_not_supported),
@@ -367,7 +405,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           style: GoogleFonts.poppins(color: Colors.white, fontSize: 18),
         ),
         Text(
-          "₹${order.finalAmount ?? order.totalAmount ?? 0}",
+          "\$${((order.finalAmount ?? order.totalAmount ?? 0).toDouble()).toStringAsFixed(2)}",
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontSize: 22,

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "952930504682",
+    "project_id": "zest-employee",
+    "storage_bucket": "zest-employee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:952930504682:android:9dbc40537a700b79e32c93",
+        "android_client_info": {
+          "package_name": "com.zest_employee.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD18vcM0Me7zgPBjGei8l4aSC1QmHaYV3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

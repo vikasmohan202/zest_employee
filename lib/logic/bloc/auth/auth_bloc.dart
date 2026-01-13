@@ -47,6 +47,7 @@ on<AuthUpdateProfileRequested>((event, emit) async {
       emit(AuthLoading());
       try {
         final AuthResult res = await repo.login(event.email, event.password);
+        
         emit(AuthAuthenticated(res.employee));
       } catch (e) {
         emit(AuthFailure(e.toString()));

@@ -4,8 +4,8 @@ class Endpoints {
   static const String getAllOrder = "/order/getOrdersByEmployee";
   static const String getNotifications = "/notification/get";
   static const String signup = "/user/signup";
-  static const String updateOrderStatus="/order/updateOrderStatus/";
+  static const String updateOrderStatus = "/order/updateOrderStatus/";
   static const String profile = "/user/me";
   static const updateEmployee = "/employee/update";
-
+  static const saveToken = "/deviceToken/save-token";
 }

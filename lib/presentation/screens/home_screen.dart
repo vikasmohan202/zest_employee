@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:zest_employee/data/data_providers/auth/auth_api_impl.dart';
 
 import 'package:zest_employee/data/models/order_model.dart' as sm;
 import 'package:zest_employee/logic/bloc/auth/auth_bloc.dart';
 import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
+import 'package:zest_employee/logic/bloc/notification/notificationn_services.dart';
 import 'package:zest_employee/logic/bloc/order/order_bloc.dart';
 import 'package:zest_employee/logic/bloc/order/order_event.dart';
 import 'package:zest_employee/logic/bloc/order/order_state.dart';
@@ -92,17 +94,11 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       time = '';
     }
-    final priority =
-        (s.priceHistory.isNotEmpty && s.priceHistory.last.updatedAmount > 1000)
-        ? 'High Priority'
-        : 'Normal';
+    final priority = statusString(s.orderStatus);
+
     final address =
         s.deliveryAddress?.area ??
-        '' +
-            ', ' +
-            (s.deliveryAddress?.city ?? '') +
-            ', ' +
-            (s.deliveryAddress?.state ?? '');
+        ', ${s.deliveryAddress?.city ?? ''}, ${s.deliveryAddress?.state ?? ''}';
     final service = s.items.isNotEmpty && s.items.first.category != null
         ? s.items.first.category!.categoryName
         : 'General';
@@ -122,10 +118,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String statusString(String status) {
+    if (status == "in-process") {
+      return "In Process";
+    } else if (status == 'pickup-scheduled') {
+      return 'Pickup Scheduled';
+    } else if (status == 'delivered') {
+      return "Delivered";
+    } else {
+      return 'In-Process';
+    }
+  }
+
   UiOrderStatus _mapStatusString(String v) {
     final s = v.toLowerCase();
     if (s.contains('in-process')) return UiOrderStatus.Picked;
-    if (s.contains('pickup-scheduled,')) return UiOrderStatus.Completed;
+    if (s.contains('pickup-scheduled')) return UiOrderStatus.Completed;
     if (s.contains('delivered')) return UiOrderStatus.Delivered;
     return UiOrderStatus.Remaining;
   }
@@ -164,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (state is OrderLoadInProgress || state is OrderInitial) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (state is OrderEmpty) {
+                  if (state is OrderEmpty || state is OrderLoadFailure) {
                     return emptyState(
                       title: 'No Active Orders',
                       subtitle:
@@ -258,20 +266,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.notifications,
-                                color: Colors.white,
-                              ),
-                              onPressed: () {
+                            _headerIconButton(
+                              icon: Icons.notifications_outlined,
+                              onTap: () async {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const NotificationScreen(),
+                                    builder: (context) =>
+                                        const NotificationScreen(),
                                   ),
                                 );
                               },
+
+                              context: context,
+                              //  badgeCount: 5,
                             ),
+                            // IconButton(
+                            //   icon: const Icon(
+                            //     Icons.notifications,
+                            //     color: Colors.white,
+                            //   ),
+                            // onPressed: () {
+                            //   Navigator.push(
+                            //     context,
+                            //     MaterialPageRoute(
+                            //       builder: (_) => const NotificationScreen(),
+                            //     ),
+                            //   );
+                            // },
+                            // ),
                           ],
                         ),
                         SizedBox(height: 24),
@@ -328,7 +351,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ),
                                     ),
-                                  );
+                                  ).then((value) {
+                                    _onRefresh();
+                                  });
                                 },
                               ),
                             );
@@ -415,6 +440,32 @@ Widget safeNetworkImage(
         child: const Icon(Icons.broken_image, size: 36),
       );
     },
+  );
+}
+
+Widget _headerIconButton({
+  required BuildContext context,
+  required IconData icon,
+  required VoidCallback onTap,
+}) {
+  final width = MediaQuery.of(context).size.width;
+
+  final double boxSize = (width * 0.12).clamp(44.0, 56.0);
+  final double iconSize = (width * 0.06).clamp(20.0, 28.0);
+  final double radius = boxSize * 0.3;
+
+  return Container(
+    width: boxSize,
+    height: boxSize,
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: Colors.white.withOpacity(0.2)),
+    ),
+    child: IconButton(
+      icon: Icon(icon, color: Colors.white, size: iconSize),
+      onPressed: onTap,
+    ),
   );
 }
 

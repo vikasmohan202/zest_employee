@@ -7,6 +7,8 @@ abstract class AuthApi {
   Future<AuthResult> signup({required String email, required String password, String? name});
   Future<AuthResult> me(String token);
   Future<NotificationResponse> getNotification();
+  Future<void> saveToken();
+
 
   Future<AuthResult> updateProfile({
     required String employeeId,

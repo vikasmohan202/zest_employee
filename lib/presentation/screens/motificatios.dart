@@ -3,11 +3,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:zest_employee/logic/bloc/notification/notification_bloc.dart';
+import 'package:zest_employee/logic/bloc/notification/notification_event.dart';
 import 'package:zest_employee/logic/bloc/notification/notification_state.dart';
+import 'package:zest_employee/presentation/widgets/custom_appbar.dart';
 
-class NotificationScreen extends StatelessWidget {
+class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
-  
+
+  @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
+  @override
+  void initState() {
+
+    context.read<NotificationBloc>().add(FetchNotificationsRequested());
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,19 +28,11 @@ class NotificationScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
+      appBar: CustomAppBar(
         backgroundColor: bgColor,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          "Notifications",
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: "Notifications",
       ),
       body: SafeArea(
         child: BlocBuilder<NotificationBloc, NotificationState>(

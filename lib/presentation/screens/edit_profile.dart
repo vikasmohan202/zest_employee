@@ -12,6 +12,7 @@ import 'package:zest_employee/data/models/admin_model.dart';
 import 'package:zest_employee/logic/bloc/auth/auth_bloc.dart';
 import 'package:zest_employee/logic/bloc/auth/auth_event.dart';
 import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
+import 'package:zest_employee/presentation/widgets/custom_appbar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final Admin employee;
@@ -89,19 +90,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       },
       child: Scaffold(
         backgroundColor: const Color.fromRGBO(51, 107, 63, 1),
-        appBar: AppBar(
+        appBar: CustomAppBar(
           backgroundColor: const Color.fromRGBO(51, 107, 63, 1),
           elevation: 0,
           centerTitle: true,
-          title: Text(
-            "Edit Profile",
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          iconTheme: const IconThemeData(color: Colors.white),
+          title: "Edit Profile",
         ),
         body: SafeArea(
           child: BlocBuilder<AuthBloc, AuthState>(
@@ -163,12 +156,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       controller: emailController,
                       labelText: "Email Address",
                       keyboardType: TextInputType.emailAddress,
+                      isEnabled: false,
                     ),
                     const SizedBox(height: 35),
 
                     BrandedTextField(
                       controller: phoneController,
                       labelText: "Phone Number",
+                      isEnabled: false,
                       prefix: GestureDetector(
                         onTap: () {
                           showCountryPicker(

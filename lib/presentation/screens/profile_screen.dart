@@ -9,9 +9,14 @@ import 'package:zest_employee/logic/bloc/auth/auth_event.dart';
 import 'package:zest_employee/logic/bloc/auth/auth_state.dart';
 import 'package:zest_employee/presentation/screens/edit_profile.dart';
 import 'package:zest_employee/presentation/screens/login_screen.dart';
+import 'package:zest_employee/presentation/screens/privacy_policies.dart';
+import 'package:zest_employee/presentation/support/create%20ticket.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  static const Color _bgColor = Color.fromRGBO(51, 107, 63, 1);
+  static const Color _accentColor = Color.fromRGBO(201, 248, 186, 1);
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +24,8 @@ class ProfileScreen extends StatelessWidget {
       builder: (context, state) {
         if (state is AuthLoading) {
           return const Scaffold(
-            backgroundColor: Color.fromRGBO(51, 107, 63, 1),
-            body: Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
+            backgroundColor: _bgColor,
+            body: Center(child: CircularProgressIndicator(color: Colors.white)),
           );
         }
 
@@ -33,23 +36,64 @@ class ProfileScreen extends StatelessWidget {
         final Admin employee = state.employee;
 
         return Scaffold(
-          backgroundColor: const Color.fromRGBO(51, 107, 63, 1),
+          backgroundColor: _bgColor,
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _title(),
-                  const SizedBox(height: 25),
-                  _profileHeader(context, employee),
-                  const SizedBox(height: 30),
-                  _generalSection(),
-                  const SizedBox(height: 20),
-                  _notificationSection(),
-                  const SizedBox(height: 20),
-                  _divider(),
-                  _logout(context),
+                  const SizedBox(height: 24),
+
+                  _profileCard(context, employee),
+                  const SizedBox(height: 36),
+
+                  _sectionHeader("ACCOUNT"),
+                  _cardOption(
+                    icon: Icons.edit_outlined,
+                    title: "Edit Profile",
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EditProfileScreen(employee: employee),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // _sectionHeader("SUPPORT"),
+                  // _cardOption(
+                  //   icon: Icons.help_outline,
+                  //   title: "Help & Support",
+                  //   onTap: () {
+                  //     Navigator.of(context).push(
+                  //       MaterialPageRoute(
+                  //         builder: (context) {
+                  //           return CreateTicketScreen();
+                  //         },
+                  //       ),
+                  //     );
+                  //   },
+                  // ),
+                  _cardOption(
+                    icon: Icons.privacy_tip_outlined,
+                    title: "Privacy Policy",
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) {
+                            return PrivacyPolicyScreen();
+                          },
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  _logoutButton(context),
                 ],
               ),
             ),
@@ -60,7 +104,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   // ------------------------------------------------------------
-  // UI SECTIONS
+  // UI WIDGETS
   // ------------------------------------------------------------
 
   Widget _title() {
@@ -74,62 +118,17 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _profileHeader(BuildContext context, Admin employee) {
-    final String name =
-        employee.fullName.isNotEmpty ? employee.fullName : "Employee";
-    final String email =
-        employee.email.isNotEmpty ? employee.email : "email@example.com";
-
+  Widget _profileCard(BuildContext context, Admin employee) {
+    final String name = employee.fullName.isNotEmpty
+        ? employee.fullName
+        : "Employee";
+    final String email = employee.email.isNotEmpty
+        ? employee.email
+        : "email@example.com";
     final String? imageUrl = employee.profileImage;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircleAvatar(
-          radius: 42,
-          backgroundImage: imageUrl != null && imageUrl.isNotEmpty
-              ? NetworkImage(imageUrl)
-              : const AssetImage("assets/images/user.png") as ImageProvider,
-          child: (imageUrl == null || imageUrl.isEmpty)
-              ? Text(
-                  name[0].toUpperCase(),
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-              : null,
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name,
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              email,
-              style: GoogleFonts.poppins(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        _editButton(context, employee),
-      ],
-    );
-  }
-
-  Widget _editButton(BuildContext context, Admin employee) {
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -138,132 +137,98 @@ class ProfileScreen extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color.fromRGBO(201, 248, 186, 1),
-          ),
+          color: Colors.white.withOpacity(0.08),
         ),
-        child: Text(
-          "Edit",
-          style: GoogleFonts.poppins(
-            color: const Color.fromRGBO(201, 248, 186, 1),
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _generalSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader("GENERAL"),
-        _profileOption(
-          icon: Icons.location_on_outlined,
-          title: "Assigned Areas",
-          subtitle: "View assigned locations",
-          onTap: () {},
-        ),
-      ],
-    );
-  }
-
-  Widget _notificationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader("NOTIFICATIONS"),
-        _notificationSwitch(
-          icon: Icons.notifications_active_outlined,
-          title: "Push Notifications",
-          subtitle: "Daily updates",
-          value: true,
-          onChanged: (_) {},
-        ),
-        _notificationSwitch(
-          icon: Icons.campaign_outlined,
-          title: "Promotional Notifications",
-          subtitle: "Offers & campaigns",
-          value: true,
-          onChanged: (_) {},
-        ),
-      ],
-    );
-  }
-
-  Widget _logout(BuildContext context) {
-    return _profileOption(
-      icon: Icons.logout,
-      title: "Logout",
-      subtitle: "",
-      onTap: () async {
-        context.read<AuthBloc>().add(AuthLogoutRequested());
-        await TokenStorage().clear();
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      },
-    );
-  }
-
-  // ------------------------------------------------------------
-  // REUSABLE WIDGETS
-  // ------------------------------------------------------------
-
-  Widget _sectionHeader(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        text,
-        style: GoogleFonts.poppins(
-          color: const Color.fromRGBO(201, 248, 186, 1),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _profileOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 22),
-            const SizedBox(width: 14),
+            CircleAvatar(
+              radius: 42,
+              backgroundImage: imageUrl != null && imageUrl.isNotEmpty
+                  ? NetworkImage(imageUrl)
+                  : const AssetImage("assets/images/user.png") as ImageProvider,
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    name,
                     style: GoogleFonts.poppins(
                       color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (subtitle.isNotEmpty)
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white70,
+                      fontSize: 13,
                     ),
+                  ),
                 ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.white70,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text,
+          style: GoogleFonts.poppins(
+            color: _accentColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _cardOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withOpacity(0.06),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const Icon(Icons.chevron_right, color: Colors.white),
@@ -273,53 +238,35 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _notificationSwitch({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 22),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+  Widget _logoutButton(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        context.read<AuthBloc>().add(AuthLogoutRequested());
+        await TokenStorage().clear();
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.redAccent),
+        ),
+        child: Center(
+          child: Text(
+            "Logout",
+            style: GoogleFonts.poppins(
+              color: Colors.redAccent,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: const Color.fromRGBO(37, 96, 63, .3),
-            activeTrackColor: const Color.fromRGBO(201, 248, 186, 1),
-          ),
-        ],
+        ),
       ),
     );
-  }
-
-  Widget _divider() {
-    return const Divider(color: Colors.white24, thickness: 1);
   }
 }

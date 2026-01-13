@@ -12,15 +12,13 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final OrderRepository _orderRepository;
 
   OrderBloc({required OrderRepository orderRepository})
-      : _orderRepository = orderRepository,
-        super(const OrderInitial()) {
+    : _orderRepository = orderRepository,
+      super(const OrderInitial()) {
     on<OrderFetched>(_onFetched);
     on<OrderRefreshed>(_onRefreshed);
     on<OrderRequested>(_onRequested);
-     on<OrderStatusUpdated>(_onStatusUpdated);
+    on<OrderStatusUpdated>(_onStatusUpdated);
   }
-
-  
 
   Future<void> _onFetched(OrderFetched event, Emitter<OrderState> emit) async {
     // If already loading, ignore
@@ -40,11 +38,14 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     } catch (e, st) {
       // Optional: log
       // print('OrderBloc._onFetched error: $e\n$st');
-      emit(OrderLoadFailure(e.toString()));
+      emit(OrderLoadFailure("Failed To fetch order please try again."));
     }
   }
 
-  Future<void> _onRefreshed(OrderRefreshed event, Emitter<OrderState> emit) async {
+  Future<void> _onRefreshed(
+    OrderRefreshed event,
+    Emitter<OrderState> emit,
+  ) async {
     emit(const OrderLoadInProgress());
     try {
       final List<Order> orders = await _orderRepository.getAllOrders(event.id);
@@ -58,7 +59,10 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     }
   }
 
-  Future<void> _onRequested(OrderRequested event, Emitter<OrderState> emit) async {
+  Future<void> _onRequested(
+    OrderRequested event,
+    Emitter<OrderState> emit,
+  ) async {
     emit(const OrderLoadInProgress());
     // try {
     //   final Order? order = await _orderRepository.getOrderById(event.id);
@@ -71,6 +75,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     //   emit(OrderLoadFailure(e.toString()));
     // }
   }
+
   Future<void> _onStatusUpdated(
     OrderStatusUpdated event,
     Emitter<OrderState> emit,
@@ -78,13 +83,9 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(const OrderStatusUpdateInProgress());
 
     try {
-      await _orderRepository.updateOrderStatus(
-        event.orderId,
-        event.status,
-      );
+      await _orderRepository.updateOrderStatus(event.orderId, event.status);
 
-      final orders =
-          await _orderRepository.getAllOrders(event.employeeId);
+      final orders = await _orderRepository.getAllOrders(event.employeeId);
 
       emit(OrderLoadSuccess(orders));
     } catch (e) {
@@ -92,4 +93,3 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     }
   }
 }
-

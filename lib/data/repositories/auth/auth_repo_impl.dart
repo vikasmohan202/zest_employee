@@ -21,6 +21,7 @@ class AuthRepositoryImpl implements AuthRepository {
     await _storage.saveToken(res.accessToken);
     await _storage.saveRefreshToken(res.refreshToken);
     await _storage.saveUserJson(res.employee.toJson());
+    _api.saveToken();
 
     return res;
   }

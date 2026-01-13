@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:zest_employee/config/call_helper.dart';
 import 'package:zest_employee/core/constants/api_end_point.dart';
 import 'package:zest_employee/core/network/api_clients.dart';
 import 'package:zest_employee/data/data_providers/auth/auth_api.dart';
 import 'package:zest_employee/data/models/auth_results.dart';
 import 'package:zest_employee/data/models/notification_model.dart';
+import 'package:zest_employee/logic/bloc/notification/notificationn_services.dart';
 
 class HttpAuthApi implements AuthApi {
   final ApiClient _api;
@@ -15,6 +17,7 @@ class HttpAuthApi implements AuthApi {
     required String password,
   }) async {
     final String input = email.trim();
+    String token = await NotificationService.instance.getFcmToken() ?? '';
 
     /// Decide payload key
     final Map<String, dynamic> body = {
@@ -28,6 +31,20 @@ class HttpAuthApi implements AuthApi {
     );
 
     return AuthResult.fromJson(json);
+  }
+
+  @override
+  Future<void> saveToken() async {
+    String token = await NotificationService.instance.getFcmToken() ?? '';
+    final res = await _api.post(
+      Endpoints.baseUrl + Endpoints.saveToken,
+      body: {
+        "deviceToken": token,
+        "userType": 'employee',
+        'deviceType': 'android',
+      },
+    );
+    print(res);
   }
 
   @override
